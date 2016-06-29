@@ -1,5 +1,5 @@
              NMOS Mapping of Identity and Timing Information to RTP
-              Richard Cartwright's proposal for key/value header extensions
+          Richard Cartwright's proposal for key/value header extensions
                             (DRAFT 07-RIC, June 2016)
 
 
@@ -275,6 +275,17 @@ multimedia session, header extensions of this form do not have to be
 signalled as they are self-describing. How the SDP file is accessed is 
 beyond the scope of this specification.
 
+7  Precendence
+
+The following order of precedence shall be applied when resolving conflicts
+betweem different versions of essential technical metadata and other metadata.
+
+  1. Any metadata provided within the coded stream iteself, such as the sequence
+     paramber sets (SPS) and picture parameter sets (PPS) within an H.264 stream.
+  2. Metadata carried within the header extensions of the RTP stream.
+  3. Media description provided within an SDP file.
+  4. Metadata provided by an API or stored in a database.
+
 7.  References
 
 [1]    RFC 3550, Realtime Transport Protocol (RTP)
@@ -290,19 +301,19 @@ beyond the scope of this specification.
        Linear Sampled Audio
 
 [6]    IEEE 1588-2008 - IEEE Standard for a Precision Clock Synchronization
-       Protocol for Networked Measurement and Control Systems
+       Protocol for Networked Measurement and Control Systems 
 
 [7]    SMPTE ST 12-1, Time and Control Code, 2008
 
 [8]    RFC 5285, A General Mechanism for RTP Header Extensions
 
-[9]    RFC 5484, Associating Time-Codes with RTP Streams
+[9]    RFC 5484, Associating Time-Codes with RTP Streams (not really required - was SDP extmap specific)
 
 [10]   RFC 4122, A Universally Unique IDentifier (UUID) URN Namespace
 
-[11]   RFC 4566, SDP: Session Description Protocol
+[11]   RFC 4566, SDP: Session Description Protocol 
 
-[12]   SMPTE ST 258, Transfer of Edit Decision Lists, 2004 (Archived 2011)
+[12]   SMPTE ST 258, Transfer of Edit Decision Lists, 2004 (Archived 2011) (annoying crufty old reference)
 
 [13]   RFC 2616, Hypertext Transfer Protocol -- HTTP/1.1
 
