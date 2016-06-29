@@ -226,7 +226,7 @@ example:
 
 5.3.5.  Source Identifier Header Extension
 
-The Source identifier is an UUID [10], carried with key of "NMOS-FlowID" and a
+The Source identifier is an UUID [10], carried with key of "NMOS-SourceID" and a
 value formatted according to the string representation of that document. For
 example:
 
