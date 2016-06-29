@@ -1,5 +1,6 @@
              NMOS Mapping of Identity and Timing Information to RTP
-                            (DRAFT 07, May 2016)
+              Richard Cartwright's proposal for header extensions
+                            (DRAFT 07-RIC, June 2016)
 
 
 
@@ -18,7 +19,10 @@ does NOT define a payload format, and is intended to be payload format agnostic.
 As such, it can be applied to any payload format using the standard RTP header
 structure.
 
-
+This version of the specification allows a stream to be self-describing and contain
+the both the essential technical metadata (ETM) and grain-spcific metadata (GM) in a
+form that it can be decoded without reference to an external source, such as an SDP
+file, while remaining compatible with SDP stream description.
 
 2.  Grain (informative)
 
@@ -60,7 +64,7 @@ uncompressed audio.
 
 4.  Intimate Metadata RTP Format
 
-A number of intimate metadata items are referenced in this specification:
+A number of intimate grain metadata items are referenced in this specification:
  - PTP Sync (IEEE 1588-2008) Timestamp [6]
  - PTP Origin (IEEE 1588-2008) Timestamp [6]
  - SMPTE ST 12-1 (SMPTE 12M) Timecodes [7]
@@ -99,17 +103,22 @@ should be played back. Data Grains may use the duration to signal a display
 period or validity period as appropriate. Instantaneous Data Grains identifying
 events should signal a duration of zero.
 
-
+Essential technical metadata consists of a MIME type and parameters that provide
+a decoder with sufficient parameters that it may start decoding. Additionally,
+details of the packing structure may be included.
 
 5.  RTP Stream
 
 The RTP stream consists of a sequence of RTP packets. Each packet consists
 of a header, optional header extensions and payload data.
 
-The first and last packet of a Grain in an RTP stream contains header
-extensions. The header extensions in the first packet include the intimate
-metadata and the Grain flags. The last packet contains the Grain flags.
+The first and last packet of a Grain in an RTP stream carrying uncompressed data
+contains header extensions. The header extensions in the first packet include 
+the intimate metadata and the Grain flags. The last packet contains the Grain flags.
 
+For compressed streams, a Grain is either a frame or a group of pictures (GOP). If 
+the Grain represents a frame, only the IDR frames have to contain a complete set of
+the intimate metadata. Other Grains only need to carry the Grain flags.
 
 5.3.  RTP Packet Header Extensions
 
@@ -121,256 +130,150 @@ The following header extensions are defined in this specification:
   5. Source Identifier
   6. Grain Duration (optional)
   7. Grain Flags
+  8. Content type
+  9. Packing
 
-Header extensions 1-7 are present in the first packet and 7 is present in the
-last packet. Header extension 3 may be omitted entirely from the first packet
-if no timecode is available.
+Header extensions 1-7 are present either with the first packet or in a directly 
+preceeding packet with no payload. Header extension 7 is present in the
+last packet or a directlu preceeding packet with no payload. Header extension 3 
+may be omitted entirely from the first set of extensions if no timecode is available.
 
-The maximum additional size of the 7 header extensions listed above is 80 bytes
-and for the 1 header extension in the last packet it is 8 bytes (which includes
-2 padding bytes).
+Header extensions may expand to fill a whole RTP packet.
 
-
-The one-byte header form of extension specified in [8] is used. This allows a
-maximum individual extension size of 16 bytes excluding the header. The format
+The two-byte header form of extension specified in [8] is used. This allows a
+maximum individual extension size of 256 bytes excluding the header. The format
 is as follows:
 
-    0                   1                   2                   3
-    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   |         identifier            |           length              |
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   |                       header extensions                       |
-   |                             ....                              |
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+Each extension starts with a four byte header using the following form:
 
-  identifier: 16 bits
-    The value shall be 0xBEDE. This identifies the one-byte header extension
+   0                   1
+   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  |         0x100         |appbits|
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  |   header extensions ....      |
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  
+  identifier: 24 bits
+    The value shall be 0x0100. This identifies the two-byte header extension
     form specified in [8].
 
-  length: 16 bits
-    Equals the size of the header extensions in 32-bit units. The size does not
-    include the 4 byte extension header.
+  appbits: 4 bits
+    The appbits shall be a bit mask set as follows:
 
+      0x8 - set bit to indicate complete set of intimate metadata
+      0x4 - set bit to indicate partial set of intimate metadata
+      0x2 - set to indicate the presence of essential technical metadata
+      0x1 - set to indicate the presence of extension headers
 
-The header extensions consists of extension data bytes and padding bytes. The
-total header extensions size shall be a multiple of 4 bytes.
+Each element of header metadata has the following form:
 
-Zero or more padding bytes may be used between header extensions or at the
-end of the header extensions. Padding is used to get the header extensions size
-to be a multiple of 4 bytes. A padding byte is a zero byte.
+    0                   1
+    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |       ID      |     length    |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
-Each extension starts with a one byte header using the following form:
+  identifier (ID): 8 bits
+     Local identifier for the extension. The value shall be 1-256 and be unique 
+     within this set of header extensions. 
 
-    0 1 2 3 4 5 6 7
-   +-+-+-+-+-+-+-+-+
-   |  id   |  len  |
-   +-+-+-+-+-+-+-+-+
+  length (len): 8 bits
+     Number of the extension in number of bytes. A value 0 indicates that no value
+     is provided.
 
-  identifier (id): 4 bits
-     Local identifier for the extension. The value shall be 1-14.
+Note: The mapping between the local identifier and the header extension type is not 
+relevant in this specification.
 
-  length (len): 4 bits
-     Number of extension bytes minus 1. A value 0 therefore indicates that one
-     byte of data follows.
+Each header extension shall consist of a string that is a UTF-8 encoded for the form
+"<key>: <value>", similar to the messages headers used with HTTP [13]. The key should
+be registered with IANA [15] or use "NMOS-" form for the extensions defined by this 
+document. 
 
-
-The mapping between the local identifier and the header extension type should be
-signalled out of band and should not be assumed to match the numbering
-identified above.
-
+Note: The "X-" prefix for message header field names has been deprecated [14].
 
 5.3.1.  PTP Sync Timestamp Header Extension
 
-The PTP Sync timestamp consists of a 48-bit seconds field followed by a 32-bit
-nano-second field. The length value in the extension header is 9.
+The PTP Sync timestamp has key "NMOS-PTPSync" with a value that is an integer seconds 
+field followed by an integer nano-second field, separated by a colon. The nano-second 
+field should be padded to 9 digits. For example:
 
+    NMOS-PTPSync: 1467212802:976000000
 
 5.3.2.  PTP Origin Timestamp Header Extension
 
-The PTP Origin timestamp consists of a 48-bit seconds field followed by a 32-bit
-nano-second field. The length value in the extension header is 9.
+The PTP Origin timestamp has key "NMOS-OriginTimestamp" with a value that is 
+an integer seconds field followed by an integer nano-second field, separated by 
+a colon. The nano-second field should be padded to 9 digits. For example:
 
+    NMOS-OriginTimestamp: 1467212802:976000000
 
 5.3.3.  SMPTE ST 12-1 (SMPTE 12M) Timecode Header Extension
 
-The Timecode header extension is specified in [7]. The full format form is
-used - see section 6.2 of [7]. The value is 8 bytes and therefore the length
-value in the extension header is 7.  Use of the Timecode Header Extension is
-optional.
+The Timecode header extension has key "NMOS-Timecode" and value formatted 
+accoroding to [12], the commonly used "hh:mm:ss[:;]ff" format. Use of the Timecode 
+Header Extension is optional. For example:
 
+    NMOS-Timecode: 12:23:53;05
 
 5.3.4.  Flow Identifier Header Extension
-The Flow identifier is an UUID [10]. The value is 16 bytes and therefore the
-length value in the extension header is 15.
 
+The Flow identifier is an UUID [10], carried with key of "NMOS-FlowID" and a
+value formatted according to the string representation of that document. For
+example:
+
+    NMOS-FlowID: 26F8B45A-027A-49D3-B135-DC8333D725DF
 
 5.3.5.  Source Identifier Header Extension
 
-The Source identifier is an UUID [10]. The value is 16 bytes and therefore the
-length value in the extension header is 15.
+The Source identifier is an UUID [10], carried with key of "NMOS-FlowID" and a
+value formatted according to the string representation of that document. For
+example:
 
-
+    NMOS-SourceID: CEDEAC75-B3F6-4F8F-BA29-E5DBEA722E8B
+    
 5.3.6.  Grain Duration Header Extension
 
-The Grain duration is a rational consisting of a 4 byte numerator and 4 byte
-denominator. The value is 8 bytes and therefore the length value in the
-extension header is 7.  Specification of Grain Duration is optional.
+The Grain duration is a rational number with key "NMOS-GrainDuration" and 
+a key consisting of integer numerator and denoninator values, separated by
+a slash "/". For example:
 
+    NMOS-GrainDuration: 1001/30000
 
 5.3.7.  Grain Flags Header Extension
 
-The Grain Flags are a single byte with the following form:
+The Grain Flags indicate the start or end of a grain as follows:
 
-    0 1 2 3 4 5 6 7
-   +-+-+-+-+-+-+-+-+
-   |S|E| reserved  |
-   +-+-+-+-+-+-+-+-+
+    NMOS-GrainFlags: start
+    
+    NMOS-GrainFlags: end
 
-  start flag (S): 1 bit
-    This bit shall be set to 1 in the first packet of the Grain. Otherwise it
-    shall be set to 0.
+Further enumeration values for the grain flag may be defined in the future.
 
-  end flag (E): 1 bit
-    This bit shall be set to 1 in the last packet of the Grain. Otherwise it
-    shall be set to 0.
+5.3.8.  Essential Technical Metadata
 
-  reserved: 6 bits
-     These bits are reserved for future use and should be set to 0.
+Essential Technical Metadata is carried with key "Content-Type" and a value 
+that is the text representation of the MIME-type of the data as specified for
+the Content-Type header in HTTP [13]. For example:
 
-The length value in the extension header is 0.
+    Content-Type: video/raw; sampling=YCbCr-4:2:2; width=1920; height=1080; depth=10; colorimetry=BT709-2; interlace=1
 
+    Content-Type: audio/L16; rate=48000; channels=2
 
+5.3.9.  Extension metadata
+
+Other extension metadata may be provided with the stream, ensuring that names
+do not clash with those defined by IANA or this document. Field names starting
+"NMOS-" shall be considered reserved for definition by current and future NMOS
+specifications. See best current practice in the definition of message header
+field names [14].
 
 6  SDP
 
 Where a Session Description Protocol (SDP) file [11] is used to describe a
-multimedia session, the header extensions specified above should be signalled
-as follows. How the SDP file is accessed is beyond the scope of this
-specification.
-
-
-6.1.  Describing the Header Extensions
-
-The RTP header extensions are identified locally by a number 1-14. The SDP
-file maps that session local identifier to a global reference that identifies
-the extension type.
-
-
-6.1.1. PTP Sync Timestamp
-
-The PTP Sync Timestamp header extension is described using the following line:
-
-  a=extmap:<id> urn:x-nmos:rtp-hdrext:sync-timestamp
-
-The <id> is the session local identifier. See [8] for details.
-
-
-6.1.2. PTP Origin Timestamp
-
-The PTP Origin Timestamp header extension is described using the following line:
-
-  a=extmap:<id> urn:x-nmos:rtp-hdrext:origin-timestamp
-
-The <id> is the session local identifier.
-
-
-6.1.3.  SMPTE ST 12-1 (SMPTE 12M) Timecode Header Extension
-
-The Timecode header extension is described using the following line:
-
-  a=extmap:<id> urn:ietf:params:rtp-hdrext:smpte-tc <dur>@<rate>/<tc
-      base>[/drop]
-
-The <id> is the session local identifier. For RFC 4175 video the <rate> is 90000
-and the <dur> equals 90000 / 25 = 3600 for 25 Hz timecode <rate>. For RFC 3190
-audio the <rate> is 48000 and the <dur> equals 48000 / 25 = 1920 for 25 Hz
-timecode <rate>.
-
-
-6.1.4.  Flow Identifier Header Extension
-
-The Flow Identifier header extension is described using the following line:
-
-  a=extmap:<id> urn:x-nmos:rtp-hdrext:flow-id
-
-The <id> is the session local identifier.
-
-
-6.1.5.  Source Identifier Header Extension
-
-The Source Identifier header extension is described using the following line:
-
-  a=extmap:<id> urn:x-nmos:rtp-hdrext:source-id
-
-The <id> is the session local identifier.
-
-
-6.1.6.  Grain Duration Header Extension
-
-The Grain Duration header extension is described using the following line:
-
-  a=extmap:<id> urn:x-nmos:rtp-hdrext:grain-duration
-
-The <id> is the session local identifier.
-
-
-6.1.7.  Grain Flags Header Extension
-
-The Grain Flags header extension is described using the following line:
-
-  a=extmap:<id> urn:x-nmos:rtp-hdrext:grain-flags
-
-The <id> is the session local identifier.
-
-
-6.2.   Examples
-
-An example SDP file is shown below for RFC 4175 1080i50 video:
-
-  v=0
-  o=- 1443716955 1443716955 IN IP4 172.29.82.50
-  s=NMOS Stream
-  t=0 0
-  m=video 5000 RTP/AVP 96
-  c=IN IP4 232.121.83.127/32
-  a=source-filter:incl IN IP4 232.121.83.127 172.29.82.50
-  a=rtpmap:96 raw/90000
-  a=fmtp:96 sampling=YCbCr-4:2:2; width=1920; height=1080; depth=10;
-      colorimetry=BT709-2; interlace=1
-  a=mediaclk:direct=1119082333 rate=90000
-  a=extmap:1 urn:x-nmos:rtp-hdrext:origin-timestamp
-  a=extmap:2 urn:ietf:params:rtp-hdrext:smpte-tc 3600@90000/25
-  a=extmap:3 urn:x-nmos:rtp-hdrext:flow-id
-  a=extmap:4 urn:x-nmos:rtp-hdrext:source-id
-  a=extmap:5 urn:x-nmos:rtp-hdrext:grain-flags
-  a=extmap:7 urn:x-nmos:rtp-hdrext:sync-timestamp
-  a=extmap:9 urn:x-nmos:rtp-hdrext:grain-duration
-  a=ts-refclk:ptp=IEEE1588-2008:ec-46-70-ff-fe-00-42-c4
-
-
-An example SDP file is shown below for RFC 3190 2 channel audio:
-
-  v=0
-  o=- 1443080730 1443080730 IN IP4 172.29.80.68
-  s=NMOS Stream
-  t=0 0
-  m=audio 5000 RTP/AVP 98
-  c=IN IP4 232.226.253.166/32
-  a=source-filter:incl IN IP4 232.226.253.166 172.29.80.68
-  a=rtpmap:98 L24/48000/2
-  a=control:trackID=1
-  a=mediaclk:direct=1970351840 rate=48000
-  a=extmap:1 urn:x-nmos:rtp-hdrext:origin-timestamp
-  a=extmap:2 urn:ietf:params:rtp-hdrext:smpte-tc 1920@48000/25
-  a=extmap:3 urn:x-nmos:rtp-hdrext:flow-id
-  a=extmap:4 urn:x-nmos:rtp-hdrext:source-id
-  a=extmap:5 urn:x-nmos:rtp-hdrext:grain-flags
-  a=extmap:7 urn:x-nmos:rtp-hdrext:sync-timestamp
-  a=extmap:9 urn:x-nmos:rtp-hdrext:grain-duration
-  a=ts-refclk:ptp=IEEE1588-2008:ec-46-70-ff-fe-00-42-c4
-
-
+multimedia session, header extensions of this form do not have to be 
+signalled as they are self-describing. How the SDP file is accessed is 
+beyond the scope of this specification.
 
 7.  References
 
@@ -398,3 +301,11 @@ An example SDP file is shown below for RFC 3190 2 channel audio:
 [10]   RFC 4122, A Universally Unique IDentifier (UUID) URN Namespace
 
 [11]   RFC 4566, SDP: Session Description Protocol
+
+[12]   SMPTE ST 258, Transfer of Edit Decision Lists, 2004 (Archived 2011)
+
+[13]   RFC 2616, Hypertext Transfer Protocol -- HTTP/1.1
+
+[14]   RFC 6648, Deprecating the "X-" Prefix and Similar Constructs in Application Protocols
+
+[15]   RFC 3864, Registration Procedures for Message Header Fields
