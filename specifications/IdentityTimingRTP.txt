@@ -1,5 +1,5 @@
              NMOS Mapping of Identity and Timing Information to RTP
-              Richard Cartwright's proposal for header extensions
+              Richard Cartwright's proposal for key/value header extensions
                             (DRAFT 07-RIC, June 2016)
 
 
