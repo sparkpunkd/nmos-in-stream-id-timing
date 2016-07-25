@@ -1,6 +1,6 @@
              NMOS Mapping of Identity and Timing Information to RTP
           Richard Cartwright's proposal for key/value header extensions
-                            (DRAFT 07-RIC, June 2016)
+                            (DRAFT 07-RIC, July 2016)
 
 
 
@@ -144,7 +144,7 @@ The two-byte header form of extension specified in [8] is used. This allows a
 maximum individual extension size of 256 bytes excluding the header. The format
 is as follows:
 
-Each extension starts with a four byte header using the following form:
+Each extension starts with a 16-bit header using the following form:
 
    0                   1
    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5
@@ -159,14 +159,12 @@ Each extension starts with a four byte header using the following form:
     form specified in [8].
 
   appbits: 4 bits
-    The appbits shall be a bit mask set as follows:
+    The appbits shall be set to 0. This is because no extension has been 
+    specified through configuration or signaling for this local identifier 
+    value 256. 
 
-      0x8 - set bit to indicate complete set of intimate metadata
-      0x4 - set bit to indicate partial set of intimate metadata
-      0x2 - set to indicate the presence of essential technical metadata
-      0x1 - set to indicate the presence of extension headers
-
-Each element of header metadata has the following form:
+Each element of header metadata starts with a byte containing an ID and a byte 
+containing a length:
 
     0                   1
     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5
@@ -178,17 +176,17 @@ Each element of header metadata has the following form:
      Local identifier for the extension. The value shall be 1-256 and be unique 
      within this set of header extensions. 
 
-  length (len): 8 bits
-     Number of the extension in number of bytes. A value 0 indicates that no value
-     is provided.
-
-Note: The mapping between the local identifier and the header extension type is not 
-relevant in this specification.
+  length: 8 bits
+     Length of the extension in number of bytes not including the ID and length 
+     fields. A value 0 indicates that no value is provided.
 
 Each header extension shall consist of a string that is a UTF-8 encoded for the form
 "<key>: <value>", similar to the messages headers used with HTTP [13]. The key should
 be registered with IANA [15] or use "NMOS-" form for the extensions defined by this 
 document. 
+
+Note: The mapping between the local identifier and the header extension type is not 
+relevant in this specification and so it does not need to be signalled.
 
 Note: The "X-" prefix for message header field names has been deprecated [14].
 
@@ -206,7 +204,7 @@ The PTP Origin timestamp has key "NMOS-OriginTimestamp" with a value that is
 an integer seconds field followed by an integer nano-second field, separated by 
 a colon. The nano-second field should be padded to 9 digits. For example:
 
-    NMOS-OriginTimestamp: 1467212802:976000000
+    NMOS-PTPOriginTimestamp: 1467212802:976000000
 
 5.3.3.  SMPTE ST 12-1 (SMPTE 12M) Timecode Header Extension
 
@@ -223,6 +221,9 @@ value formatted according to the string representation of that document. For
 example:
 
     NMOS-FlowID: 26F8B45A-027A-49D3-B135-DC8333D725DF
+
+Note: As per [10], characters A-F and a-f are used for hexidecimal digits 
+and may be upper or lower case.
 
 5.3.5.  Source Identifier Header Extension
 
@@ -256,29 +257,48 @@ Essential Technical Metadata is carried with key "Content-Type" and a value
 that is the text representation of the MIME-type of the data as specified for
 the Content-Type header in HTTP [13]. For example:
 
-    Content-Type: video/raw; sampling=YCbCr-4:2:2; width=1920; height=1080; depth=10; colorimetry=BT709-2; interlace=1
+    Content-Type: video/raw; sampling=YCbCr-4:2:2; width=1920; height=1080; 
+      depth=10; colorimetry=BT709-2; interlace=1
 
     Content-Type: audio/L16; rate=48000; channels=2
+    
+5.3.9.  Content length
+
+The total length of the grain's payload, measured in bytes, may be provided
+using the Content-Length header as in HTTP [13]. For example:
+
+    Content-Length: 5184000
+
+This is an optional field. In many cases, the grain payload length may be 
+inferred from the content type. 
 
 5.3.9.  Extension metadata
 
 Other extension metadata may be provided with the stream, ensuring that names
-do not clash with those defined by IANA or this document. Field names starting
+should not clash with those defined by IANA or this document. Field names starting
 "NMOS-" shall be considered reserved for definition by current and future NMOS
 specifications. See best current practice in the definition of message header
 field names [14].
 
-6  SDP
+6  Signaling and SDP
 
-Where a Session Description Protocol (SDP) file [11] is used to describe a
-multimedia session, header extensions of this form do not have to be 
-signalled as they are self-describing. How the SDP file is accessed is 
-beyond the scope of this specification.
+Where [8] refers to the requirement for out-of-band signaling of the
+presence and type of header extensions, this document in combination with an
+assertion that a stream is an NMOS stream shall satify that requirement. Any 
+RTP stream that was discovered via an NMOS registration and discovery API
+shall be considered an NMOS stream with extensions as defined by this
+specification.
+
+Where an optional Session Description Protocol (SDP) file [11] is used to 
+describe a multimedia session, header extensions of this form do not have 
+to be signalled as they are self-describing. How the SDP file is accessed is 
+beyond the scope of this specification. 
 
 7  Precendence
 
 The following order of precedence shall be applied when resolving conflicts
 betweem different versions of essential technical metadata and other metadata.
+The order of the following list is highest priority of precedence first.
 
   1. Any metadata provided within the coded stream iteself, such as the sequence
      paramber sets (SPS) and picture parameter sets (PPS) within an H.264 stream.
