@@ -9,7 +9,7 @@ This proposal has the following advantages:
 * Streams are self-describing to the point they can be decoded. No need for external SDP as the MIME type is carried. Still works with SDP if you want.
 * No need to de-reference an external schema to find out the local identifier indexes and not limited by the 4-bit length fields of one-byte headers.
 * Grain metadata is carried within the stream, and in a form that will carry over well to other transport mappings in the future.
-* No need to define a new RFC - compatible with RFC4175 / RFC3190 / RFC5285 as they stand.
+* No need to define a new RFC - as arguably compatible with RFC 3350 / RFC4175 / RFC3190 / RFC5285 as the current work-in-progress-spec.
 * Extendible headers that can be used for use cases taht we haven't thought of yet and/or for vendor/user specific workflows.
 * Human readable in network analysers without extension.
 * Carried within the same stream - no need to coordinate two separate streams to start processing or reference an external service.
