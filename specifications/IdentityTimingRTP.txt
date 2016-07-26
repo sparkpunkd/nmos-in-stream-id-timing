@@ -200,11 +200,11 @@ field should be padded to 9 digits. For example:
 
 5.3.2.  PTP Origin Timestamp Header Extension
 
-The PTP Origin timestamp has key "NMOS-OriginTimestamp" with a value that is 
+The PTP Origin timestamp has key "NMOS-PTPOrigin" with a value that is 
 an integer seconds field followed by an integer nano-second field, separated by 
 a colon. The nano-second field should be padded to 9 digits. For example:
 
-    NMOS-PTPOriginTimestamp: 1467212802:976000000
+    NMOS-PTPOrigin: 1467212802:976000000
 
 5.3.3.  SMPTE ST 12-1 (SMPTE 12M) Timecode Header Extension
 
