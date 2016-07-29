@@ -1,0 +1,12 @@
+[
+{
+  "payloadCount": 1,
+  "payloadSize": 5184000,
+  "ptpSyncTimestamp": "1453892502:360000000",
+  "ptpOriginTimestamp": "1453892502:360000000",
+  "timecode": "39:05:61:01",
+  "flow_id": "bc347834-cb67-47dc-a058-6ef4282d0437",
+  "source_id": "8fe783fc-789c-46f8-ad86-d6470d8a3a5f",
+  "duration": "1000/25000",
+  "contentType": "video/raw; sampling=YCbCr-4:2:2; width=1920; height=1080; depth=10; colorimetry=BT709-2; interlace=1"
+}]

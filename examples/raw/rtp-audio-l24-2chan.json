@@ -1,0 +1,11 @@
+[
+{
+  "payloadCount": 1,
+  "payloadSize": 11520,
+  "ptpSyncTimestamp": "1453891387:480000000",
+  "ptpOriginTimestamp": "1453891387:480000000",
+  "flow_id": "c6a963cb-a058-4fac-af25-be6444a8c6c9",
+  "source_id": "674d9658-d8b7-467d-afea-7bb0d59e20bb",
+  "duration": "1920/48000",
+  "contentType": "audio/L24; rate=48000; channels=2"
+}]
