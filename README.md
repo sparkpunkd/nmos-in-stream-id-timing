@@ -6,15 +6,31 @@ The repository is a fork of the NMOS RTP streams specification and is a proposal
 
 This proposal has the following advantages:
 
-* Streams are self-describing to the point they can be decoded. No need for external SDP as the MIME type is carried. Still works with SDP if you want, or you could use direct stream references with IP address and port number.
+* Streams are self-describing to the point they can be decoded. No need for external SDP as the MIME type is carried. Still works with SDP if you want, or you could use direct stream references with IP address and port number e.g. `rtp://@225.6.7.8:5001/`.
 * No need to de-reference an external schema to find out the local identifier indexes and not limited by the 4-bit length fields of one-byte headers.
 * Grain metadata is carried within the stream, and in a form that will carry over well to other transport mappings in the future.
 * No need to define a new RFC - as arguably compatible with RFC 3350 / RFC4175 / RFC3190 / RFC5285 as the current work-in-progress-spec.
 * Extendible headers that can be used for use cases taht we haven't thought of yet and/or for vendor/user specific workflows.
-* Human readable in network analysers without extension.
+* Human readable in network analysers without extension. Headers are similar to those used in HTTP.
 * Carried within the same stream - no need to coordinate two separate streams to start processing or reference an external service.
 
-The trade off is longer headers, which some may worry about, but the value of headers is widely accepted and other optimisations, such as HTTP2, are using compression to facilitate more efficient carriage.
+The trade off is longer headers, which some may worry about, but the value of headers is widely accepted and other optimisations, such as HTTP2, are using compression to facilitate more efficient carriage. An alternetive is to accumulate headers and not include every header in every grain. For example, flow ID, source ID and content type could be carried every 1-2 seconds.
+
+Here is an overview of how start grain headers might look:
+
+```
+NMOS-PTPSync: 1467212802:976000000
+NMOS-PTPOrigin: 1467212802:976000000
+NMOS-Timecode: 12:23:53;05
+NMOS-FlowID: 26F8B45A-027A-49D3-B135-DC8333D725DF
+NMOS-SourceID: CEDEAC75-B3F6-4F8F-BA29-E5DBEA722E8B
+NMOS-GrainDuration: 1001/30000
+NMOS-GrainFlags: start
+Content-Type: video/raw; sampling=YCbCr-4:2:2; width=1920; height=1080; depth=10; colorimetry=BT709-2; interlace=1
+Content-Length: 5184000
+```
+
+# Specification details
 
 This repository contains details of AMWA's Specification for signaling Source and Flow identifiers and Grain timestamps within streams.
 
